@@ -25,7 +25,7 @@ export const CONFIG = {
 
   // Gemini API (for dev mode — production uses serverless proxy)
   GEMINI_MODEL: 'gemini-1.5-flash',
-  GEMINI_API_URL: 'https://generativelanguage.googleapis.com/v1beta/models',
+  GEMINI_API_URL: 'https://generativelanguage.googleapis.com/v1/models',
 
   // Chat settings
   CHAT_MAX_TOKENS: 500,
