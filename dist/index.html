@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Vikrant Ghodichor — Full Stack Developer portfolio. Explore projects, skills, and experience. Chat with an AI assistant to learn more." />
+  <meta name="theme-color" content="#0a0a1a" />
+  <title>Vikrant Ghodichor | AI-Powered Portfolio</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="/assets/index-BHC-WUaR.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DfZ8RT6T.css">
+</head>
+<body>
+  <!-- ==================== PARTICLES CANVAS ==================== -->
+  <canvas id="particles-canvas"></canvas>
+
+  <!-- ==================== NAVIGATION ==================== -->
+  <nav class="nav" id="navbar">
+    <div class="nav__container">
+      <a href="#" class="nav__logo">
+        <span class="nav__logo-icon">V</span>
+        <span class="nav__logo-text">Portfolio</span>
+      </a>
+      <ul class="nav__links" id="nav-links">
+        <li><a href="#hero" class="nav__link active">Home</a></li>
+        <li><a href="#about" class="nav__link">About</a></li>
+        <li><a href="#skills" class="nav__link">Skills</a></li>
+        <li><a href="#projects" class="nav__link">Projects</a></li>
+        <li><a href="#contact" class="nav__link">Contact</a></li>
+      </ul>
+      <button class="nav__toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==================== HERO ==================== -->
+  <section class="hero" id="hero">
+    <div class="hero__content">
+      <div class="hero__avatar-wrapper">
+        <img class="hero__avatar" id="hero-avatar" src="" alt="Profile" />
+        <div class="hero__avatar-ring"></div>
+      </div>
+      <p class="hero__greeting">Hello, I'm</p>
+      <h1 class="hero__name" id="hero-name">Vikrant Ghodichor</h1>
+      <p class="hero__tagline">
+        <span class="hero__tagline-static">I'm a </span>
+        <span class="hero__tagline-typed" id="typewriter"></span>
+        <span class="hero__cursor">|</span>
+      </p>
+      <p class="hero__bio" id="hero-bio"></p>
+      <div class="hero__cta">
+        <a href="#projects" class="btn btn--primary">View Projects</a>
+        <a href="#contact" class="btn btn--outline">Get in Touch</a>
+      </div>
+    </div>
+    <div class="hero__scroll-indicator">
+      <span>Scroll</span>
+      <div class="hero__scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- ==================== STATS ==================== -->
+  <section class="stats" id="stats">
+    <div class="container">
+      <div class="stats__grid">
+        <div class="stats__card reveal">
+          <span class="stats__number" data-target="0" id="stat-repos">0</span>
+          <span class="stats__label">Repositories</span>
+        </div>
+        <div class="stats__card reveal">
+          <span class="stats__number" data-target="0" id="stat-stars">0</span>
+          <span class="stats__label">Total Stars</span>
+        </div>
+        <div class="stats__card reveal">
+          <span class="stats__number" data-target="0" id="stat-forks">0</span>
+          <span class="stats__label">Total Forks</span>
+        </div>
+        <div class="stats__card reveal">
+          <span class="stats__number" data-target="0" id="stat-followers">0</span>
+          <span class="stats__label">Followers</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ABOUT ==================== -->
+  <section class="about" id="about">
+    <div class="container">
+      <h2 class="section__title reveal">About <span class="gradient-text">Me</span></h2>
+      <div class="about__content reveal">
+        <div class="about__text" id="about-text">
+          <p>Loading profile information...</p>
+        </div>
+        <div class="about__info">
+          <div class="about__info-item" id="about-location">
+            <svg class="about__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>—</span>
+          </div>
+          <div class="about__info-item" id="about-joined">
+            <svg class="about__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>—</span>
+          </div>
+          <div class="about__info-item" id="about-company">
+            <svg class="about__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SKILLS ==================== -->
+  <section class="skills" id="skills">
+    <div class="container">
+      <h2 class="section__title reveal">Tech <span class="gradient-text">Stack</span></h2>
+      <p class="section__subtitle reveal">Languages and technologies used across my repositories</p>
+      <div class="skills__grid" id="skills-grid">
+        <div class="skills__loading">Analyzing repositories...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PROJECTS ==================== -->
+  <section class="projects" id="projects">
+    <div class="container">
+      <h2 class="section__title reveal">Featured <span class="gradient-text">Projects</span></h2>
+      <p class="section__subtitle reveal">My top open-source repositories</p>
+      <div class="projects__grid" id="projects-grid">
+        <div class="projects__loading">Loading projects...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== CONTACT ==================== -->
+  <section class="contact" id="contact">
+    <div class="container">
+      <h2 class="section__title reveal">Get in <span class="gradient-text">Touch</span></h2>
+      <p class="section__subtitle reveal">Interested in collaborating? Let's connect!</p>
+      <div class="contact__links reveal" id="contact-links">
+        <a href="https://github.com/vikrantghodichor16-netizen" target="_blank" rel="noopener" class="contact__card">
+          <svg class="contact__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          <span>GitHub</span>
+        </a>
+        <a href="mailto:vikrantghodichor16@gmail.com" class="contact__card" id="contact-email">
+          <svg class="contact__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>Email</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="footer">
+    <div class="container">
+      <p>Built with <span class="gradient-text">♥</span> and AI • <span id="footer-year">2026</span></p>
+    </div>
+  </footer>
+
+  <!-- ==================== CHATBOT ==================== -->
+  <div class="chatbot" id="chatbot">
+    <button class="chatbot__fab" id="chatbot-fab" aria-label="Open AI Chat">
+      <svg class="chatbot__fab-icon chatbot__fab-icon--chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <svg class="chatbot__fab-icon chatbot__fab-icon--close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <span class="chatbot__fab-pulse"></span>
+    </button>
+    <div class="chatbot__panel" id="chatbot-panel">
+      <div class="chatbot__header">
+        <div class="chatbot__header-info">
+          <div class="chatbot__header-dot"></div>
+          <span>AI Assistant</span>
+        </div>
+        <button class="chatbot__settings-btn" id="chatbot-settings-btn" aria-label="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+      <!-- Settings dropdown -->
+      <div class="chatbot__settings" id="chatbot-settings">
+        <label class="chatbot__settings-label" for="api-key-input">Gemini API Key</label>
+        <input type="password" class="chatbot__settings-input" id="api-key-input" placeholder="Enter your Gemini API key..." />
+        <button class="chatbot__settings-save" id="api-key-save">Save Key</button>
+        <p class="chatbot__settings-hint">Get a free key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a></p>
+      </div>
+      <div class="chatbot__messages" id="chatbot-messages">
+        <div class="chatbot__welcome">
+          <p>👋 Hi! I'm an AI assistant. Ask me anything about Vikrant's projects, skills, or experience!</p>
+        </div>
+        <div class="chatbot__chips" id="chatbot-chips">
+          <button class="chatbot__chip" data-prompt="What are your top projects?">🚀 Top projects</button>
+          <button class="chatbot__chip" data-prompt="What's your tech stack?">💻 Tech stack</button>
+          <button class="chatbot__chip" data-prompt="Tell me about yourself">👤 About you</button>
+          <button class="chatbot__chip" data-prompt="How can I contact you?">📬 Contact</button>
+        </div>
+      </div>
+      <div class="chatbot__input-area">
+        <input type="text" class="chatbot__input" id="chatbot-input" placeholder="Ask me anything..." />
+        <button class="chatbot__send" id="chatbot-send" aria-label="Send message">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SCRIPTS ==================== -->
+</body>
+</html>
