@@ -9,7 +9,17 @@ let conversationHistory = [];
 let portfolioContext = null; // null = not yet loaded; '' = load failed/no data
 let isStreaming = false;
 let lastRequestTime = 0;
-let cachedModels = null; // cache model list so we don't re-fetch every settings open
+
+// Hardcoded model list — eliminates the hidden API call that burns free-tier quota.
+// The models fetch was firing every page load (cache clears on refresh), wasting quota
+// before the user even sent a message, causing the 429 rate limit.
+const GEMINI_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-1.5-pro',
+];
 
 export function setPortfolioContext(profile, repos, languages) {
   const repoSummaries = repos.slice(0, 15).map(r =>
@@ -53,9 +63,7 @@ ${portfolioContext}`;
 
 async function sendToGemini(userMessage) {
   const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error('NO_API_KEY');
-  }
+  if (!apiKey) throw new Error('NO_API_KEY');
 
   conversationHistory.push({ role: 'user', parts: [{ text: userMessage }] });
 
@@ -79,9 +87,10 @@ async function sendToGemini(userMessage) {
   });
 
   if (!res.ok) {
-    const errText = await res.text();
-    if (res.status === 429) throw new Error('RATE_LIMITED');
-    throw new Error(`API_ERROR: ${res.status} ${errText}`);
+    const errBody = await res.text();
+    console.error(`Gemini API error ${res.status}:`, errBody); // log full error for debugging
+    if (res.status === 429) throw new Error(`RATE_LIMITED: ${errBody}`);
+    throw new Error(`API_ERROR: ${res.status} — ${errBody}`);
   }
 
   return res;
@@ -123,7 +132,6 @@ async function streamResponse(apiRes, contentEl, messagesEl) {
 
 export function initChatbot() {
   const fab = document.getElementById('chatbot-fab');
-  const panel = document.getElementById('chatbot-panel');
   const chatbot = document.getElementById('chatbot');
   const input = document.getElementById('chatbot-input');
   const sendBtn = document.getElementById('chatbot-send');
@@ -133,6 +141,7 @@ export function initChatbot() {
   const settingsPanel = document.getElementById('chatbot-settings');
   const apiKeyInput = document.getElementById('api-key-input');
   const apiKeySave = document.getElementById('api-key-save');
+  const modelSelect = document.getElementById('model-select');
 
   let isOpen = false;
 
@@ -143,40 +152,18 @@ export function initChatbot() {
     if (isOpen) input.focus();
   });
 
-  const modelSelect = document.getElementById('model-select');
-
-  // Settings toggle
-  settingsBtn.addEventListener('click', async () => {
+  // Settings toggle — NO API call made here, use hardcoded model list
+  settingsBtn.addEventListener('click', () => {
     settingsPanel.classList.toggle('chatbot__settings--open');
     if (settingsPanel.classList.contains('chatbot__settings--open')) {
       apiKeyInput.value = getApiKey();
       if (modelSelect) {
-        modelSelect.value = getSelectedModel();
-
-        // Only fetch models once and cache — avoid burning API quota on every settings open
-        const key = getApiKey();
-        if (key && !cachedModels) {
-          try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-            if (res.ok) {
-              const data = await res.json();
-              cachedModels = (data.models || [])
-                .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
-                .map(m => m.name.replace('models/', ''));
-            }
-          } catch (e) {
-            console.warn('Unable to fetch dynamic models list, using defaults.', e);
-          }
-        }
-
-        if (cachedModels && cachedModels.length > 0) {
-          const currentVal = getSelectedModel();
-          modelSelect.innerHTML = cachedModels.map(m => {
-            const label = m === CONFIG.GEMINI_MODEL ? `${m} (Default)` : m;
-            return `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${label}</option>`;
-          }).join('');
-          modelSelect.value = currentVal;
-        }
+        const currentVal = getSelectedModel();
+        modelSelect.innerHTML = GEMINI_MODELS.map(m => {
+          const label = m === CONFIG.GEMINI_MODEL ? `${m} (Default)` : m;
+          return `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${label}</option>`;
+        }).join('');
+        modelSelect.value = currentVal;
       }
     }
   });
@@ -184,20 +171,15 @@ export function initChatbot() {
   // Save Settings
   apiKeySave.addEventListener('click', () => {
     const key = apiKeyInput.value.trim();
-    if (key) {
-      setApiKey(key);
-      cachedModels = null; // reset model cache when key changes
-    }
-    if (modelSelect) {
-      setSelectedModel(modelSelect.value);
-    }
+    if (key) setApiKey(key);
+    if (modelSelect) setSelectedModel(modelSelect.value);
     settingsPanel.classList.remove('chatbot__settings--open');
     addMessage('assistant', '✅ Settings saved! You can now chat with me.');
   });
 
-  // ---- Core: streams API response into a new assistant bubble ----
+  // ---- Core: calls API and streams response into a new assistant bubble ----
   async function doStream(text) {
-    const res = await sendToGemini(text); // also pushes user msg to history
+    const res = await sendToGemini(text); // pushes user msg to history internally
     const assistantEl = addMessage('assistant', '');
     const contentEl = assistantEl.querySelector('.chatbot__msg-content');
     const fullText = await streamResponse(res, contentEl, messages);
@@ -207,7 +189,7 @@ export function initChatbot() {
   }
 
   // ---- Auto-retry with live countdown ----
-  // isStreaming stays true during the entire wait so user cannot queue more messages.
+  // isStreaming stays true the entire wait so the user cannot queue more messages.
   function scheduleAutoRetry(text, retryAttempt = 1) {
     const MAX_RETRIES = 2;
     const waitSecs = retryAttempt === 1 ? 60 : 120;
@@ -229,21 +211,21 @@ export function initChatbot() {
 
       try {
         await doStream(text);
-        msgEl.remove(); // success — remove the countdown bubble
+        msgEl.remove(); // success — remove countdown bubble, response is in its own bubble
       } catch (retryErr) {
-        if (retryErr.message === 'RATE_LIMITED' && retryAttempt < MAX_RETRIES) {
-          conversationHistory.pop(); // remove the user msg sendToGemini just pushed
+        if (retryErr.message.startsWith('RATE_LIMITED') && retryAttempt < MAX_RETRIES) {
+          conversationHistory.pop();
           msgEl.remove();
-          scheduleAutoRetry(text, retryAttempt + 1); // try once more with longer wait
+          scheduleAutoRetry(text, retryAttempt + 1);
           return;
         }
         conversationHistory.pop();
-        contentEl.innerHTML = retryErr.message === 'RATE_LIMITED'
-          ? '❌ Still rate limited after retries. Please wait a few minutes, then try again.'
-          : `❌ Retry failed: ${retryErr.message}`;
+        contentEl.innerHTML = retryErr.message.startsWith('RATE_LIMITED')
+          ? '❌ Still rate limited. Please wait a few minutes, then refresh the page and try again.'
+          : `❌ Retry failed. Check console for details.`;
       }
 
-      isStreaming = false; // unlock input after retry completes (success or final failure)
+      isStreaming = false; // unlock after retry completes (success or permanent failure)
     }, 1000);
   }
 
@@ -252,7 +234,7 @@ export function initChatbot() {
     const text = input.value.trim();
     if (!text || isStreaming) return;
 
-    // Client-side rate limiting
+    // Client-side cooldown
     const now = Date.now();
     if (now - lastRequestTime < CONFIG.CHAT_RATE_LIMIT_MS) {
       addMessage('assistant', '⏳ Please wait a moment before sending another message.');
@@ -262,19 +244,15 @@ export function initChatbot() {
 
     addMessage('user', text);
     input.value = '';
-
-    // Hide chips after first message
     if (chips) chips.style.display = 'none';
 
-    // API key check always comes first
     if (!hasApiKey()) {
       addMessage('assistant', '🔑 Please set your Gemini API key first! Click the ⚙️ icon above to add your free API key from <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>.');
       return;
     }
 
-    // Only block if context is still actively loading (null)
     if (portfolioContext === null) {
-      addMessage('assistant', '⏳ I\'m still loading portfolio data. Please try again in a moment.');
+      addMessage('assistant', '⏳ Still loading portfolio data. Please try again in a moment.');
       return;
     }
 
@@ -291,13 +269,13 @@ export function initChatbot() {
       if (err.message === 'NO_API_KEY') {
         addMessage('assistant', '🔑 Please set your Gemini API key in settings (⚙️ icon).');
         isStreaming = false;
-      } else if (err.message === 'RATE_LIMITED') {
-        // Pop the user msg sendToGemini pushed, then auto-retry
-        // isStreaming intentionally stays true during countdown + retry
+      } else if (err.message.startsWith('RATE_LIMITED')) {
+        // Pop user msg sendToGemini pushed, then auto-retry.
+        // isStreaming intentionally stays true during the countdown + retry.
         conversationHistory.pop();
         scheduleAutoRetry(text);
       } else {
-        addMessage('assistant', `❌ Something went wrong. Please try again.<br><small style="opacity:0.6">${err.message}</small>`);
+        addMessage('assistant', `❌ Something went wrong. Check the browser console for details.<br><small style="opacity:0.6">${err.message}</small>`);
         console.error('Chatbot error:', err);
         conversationHistory.pop();
         isStreaming = false;
@@ -313,7 +291,6 @@ export function initChatbot() {
     }
   });
 
-  // Prompt chips
   document.querySelectorAll('.chatbot__chip').forEach(chip => {
     chip.addEventListener('click', () => {
       input.value = chip.dataset.prompt;
@@ -333,7 +310,6 @@ function addMessage(role, content) {
 }
 
 function formatMessage(text) {
-  // Basic markdown-like formatting
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
