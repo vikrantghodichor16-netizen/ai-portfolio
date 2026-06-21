@@ -14,11 +14,11 @@ let lastRequestTime = 0;
 // The models fetch was firing every page load (cache clears on refresh), wasting quota
 // before the user even sent a message, causing the 429 rate limit.
 const GEMINI_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
   'gemini-1.5-flash',
   'gemini-1.5-flash-8b',
   'gemini-1.5-pro',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
 ];
 
 export function setPortfolioContext(profile, repos, languages) {
@@ -88,8 +88,19 @@ async function sendToGemini(userMessage) {
 
   if (!res.ok) {
     const errBody = await res.text();
-    console.error(`Gemini API error ${res.status}:`, errBody); // log full error for debugging
-    if (res.status === 429) throw new Error(`RATE_LIMITED: ${errBody}`);
+    console.error(`Gemini API error ${res.status}:`, errBody);
+    if (res.status === 429) {
+      // Parse the retryDelay the API gives us (e.g. "36s") so we wait exactly the right amount
+      let retryDelay = 60;
+      try {
+        const errJson = JSON.parse(errBody);
+        const retryInfo = errJson?.error?.details?.find(d => d['@type']?.includes('RetryInfo'));
+        if (retryInfo?.retryDelay) {
+          retryDelay = parseInt(retryInfo.retryDelay) + 5; // add 5s buffer
+        }
+      } catch { /* ignore parse errors */ }
+      throw new Error(`RATE_LIMITED:${retryDelay}:${errBody}`);
+    }
     throw new Error(`API_ERROR: ${res.status} — ${errBody}`);
   }
 
@@ -190,9 +201,8 @@ export function initChatbot() {
 
   // ---- Auto-retry with live countdown ----
   // isStreaming stays true the entire wait so the user cannot queue more messages.
-  function scheduleAutoRetry(text, retryAttempt = 1) {
+  function scheduleAutoRetry(text, waitSecs = 65, retryAttempt = 1) {
     const MAX_RETRIES = 2;
-    const waitSecs = retryAttempt === 1 ? 60 : 120;
 
     const msgEl = addMessage('assistant', '');
     const contentEl = msgEl.querySelector('.chatbot__msg-content');
@@ -216,7 +226,10 @@ export function initChatbot() {
         if (retryErr.message.startsWith('RATE_LIMITED') && retryAttempt < MAX_RETRIES) {
           conversationHistory.pop();
           msgEl.remove();
-          scheduleAutoRetry(text, retryAttempt + 1);
+          // Parse retry delay from new error if available
+          const parts = retryErr.message.split(':');
+          const newWait = parseInt(parts[1]) || 65;
+          scheduleAutoRetry(text, newWait, retryAttempt + 1);
           return;
         }
         conversationHistory.pop();
@@ -270,10 +283,11 @@ export function initChatbot() {
         addMessage('assistant', '🔑 Please set your Gemini API key in settings (⚙️ icon).');
         isStreaming = false;
       } else if (err.message.startsWith('RATE_LIMITED')) {
-        // Pop user msg sendToGemini pushed, then auto-retry.
-        // isStreaming intentionally stays true during the countdown + retry.
         conversationHistory.pop();
-        scheduleAutoRetry(text);
+        // Parse exact retry delay from API error (e.g. "RATE_LIMITED:41:...body...")
+        const parts = err.message.split(':');
+        const apiWait = parseInt(parts[1]) || 65;
+        scheduleAutoRetry(text, apiWait);
       } else {
         addMessage('assistant', `❌ Something went wrong. Check the browser console for details.<br><small style="opacity:0.6">${err.message}</small>`);
         console.error('Chatbot error:', err);
