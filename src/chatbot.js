@@ -3,10 +3,10 @@
 // Powered by Google Gemini with streaming responses
 // ============================================================
 
-import { CONFIG, getApiKey, setApiKey, hasApiKey } from './config.js';
+import { CONFIG, getApiKey, setApiKey, hasApiKey, getSelectedModel, setSelectedModel } from './config.js';
 
 let conversationHistory = [];
-let portfolioContext = '';
+let portfolioContext = null; // null = not yet loaded; '' = load failed/no data
 let isStreaming = false;
 let lastRequestTime = 0;
 
@@ -68,7 +68,8 @@ async function sendToGemini(userMessage) {
     },
   };
 
-  const url = `${CONFIG.GEMINI_API_URL}/${CONFIG.GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const selectedModel = getSelectedModel();
+  const url = `${CONFIG.GEMINI_API_URL}/${selectedModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -107,22 +108,54 @@ export function initChatbot() {
     if (isOpen) input.focus();
   });
 
+  const modelSelect = document.getElementById('model-select');
+
   // Settings toggle
-  settingsBtn.addEventListener('click', () => {
+  settingsBtn.addEventListener('click', async () => {
     settingsPanel.classList.toggle('chatbot__settings--open');
     if (settingsPanel.classList.contains('chatbot__settings--open')) {
       apiKeyInput.value = getApiKey();
+      if (modelSelect) {
+        modelSelect.value = getSelectedModel();
+        
+        // Fetch available models list dynamically
+        const key = getApiKey();
+        if (key) {
+          try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+            if (res.ok) {
+              const data = await res.json();
+              const models = (data.models || [])
+                .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+                .map(m => m.name.replace('models/', ''));
+
+              if (models.length > 0) {
+                const currentVal = getSelectedModel();
+                modelSelect.innerHTML = models.map(m => {
+                  const label = m === CONFIG.GEMINI_MODEL ? `${m} (Default)` : m;
+                  return `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${label}</option>`;
+                }).join('');
+              }
+            }
+          } catch (e) {
+            console.warn("Unable to fetch dynamic models list, using defaults.", e);
+          }
+        }
+      }
     }
   });
 
-  // Save API key
+  // Save Settings
   apiKeySave.addEventListener('click', () => {
     const key = apiKeyInput.value.trim();
     if (key) {
       setApiKey(key);
-      settingsPanel.classList.remove('chatbot__settings--open');
-      addMessage('assistant', '✅ API key saved! You can now chat with me.');
     }
+    if (modelSelect) {
+      setSelectedModel(modelSelect.value);
+    }
+    settingsPanel.classList.remove('chatbot__settings--open');
+    addMessage('assistant', '✅ Settings saved! You can now chat with me.');
   });
 
   // Send message
@@ -144,8 +177,15 @@ export function initChatbot() {
     // Hide chips after first message
     if (chips) chips.style.display = 'none';
 
+    // API key check always comes first
     if (!hasApiKey()) {
       addMessage('assistant', '🔑 Please set your Gemini API key first! Click the ⚙️ icon above to add your free API key from <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>.');
+      return;
+    }
+
+    // Only block if context is still actively loading (null), not if it just couldn't load
+    if (portfolioContext === null) {
+      addMessage('assistant', '⏳ I\'m still loading portfolio data. Please try again in a moment.');
       return;
     }
 

@@ -886,7 +886,7 @@ button, input {
 }
 
 .chatbot__settings--open {
-  max-height: 180px;
+  max-height: 300px;
   opacity: 1;
   padding: 16px 20px;
 }

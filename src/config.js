@@ -24,7 +24,7 @@ export const CONFIG = {
   GITHUB_API: 'https://api.github.com',
 
   // Gemini API (for dev mode — production uses serverless proxy)
-  GEMINI_MODEL: 'gemini-3.5-flash',
+  GEMINI_MODEL: 'gemini-2.0-flash',
   GEMINI_API_URL: 'https://generativelanguage.googleapis.com/v1beta/models',
 
   // Chat settings
@@ -54,4 +54,12 @@ export function setApiKey(key) {
 
 export function hasApiKey() {
   return !!getApiKey();
+}
+
+export function getSelectedModel() {
+  return localStorage.getItem('gemini_selected_model') || CONFIG.GEMINI_MODEL;
+}
+
+export function setSelectedModel(modelName) {
+  localStorage.setItem('gemini_selected_model', modelName);
 }

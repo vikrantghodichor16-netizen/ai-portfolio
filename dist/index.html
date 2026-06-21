@@ -9,9 +9,9 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <script type="module" crossorigin src="/assets/index-BHC-WUaR.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DfZ8RT6T.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="/assets/index-2QhBRlE_.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-Bm2nXv3N.css">
 </head>
 <body>
   <!-- ==================== PARTICLES CANVAS ==================== -->
@@ -181,7 +181,15 @@
       <div class="chatbot__settings" id="chatbot-settings">
         <label class="chatbot__settings-label" for="api-key-input">Gemini API Key</label>
         <input type="password" class="chatbot__settings-input" id="api-key-input" placeholder="Enter your Gemini API key..." />
-        <button class="chatbot__settings-save" id="api-key-save">Save Key</button>
+        
+        <label class="chatbot__settings-label" for="model-select" style="margin-top: 6px;">Select AI Model</label>
+        <select class="chatbot__settings-input" id="model-select" style="background: var(--bg-primary); color: white; cursor: pointer; border: 1px solid var(--glass-border);">
+          <option value="gemini-3.5-flash">gemini-3.5-flash (Default)</option>
+          <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+          <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+        </select>
+
+        <button class="chatbot__settings-save" id="api-key-save" style="margin-top: 4px;">Save Settings</button>
         <p class="chatbot__settings-hint">Get a free key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a></p>
       </div>
       <div class="chatbot__messages" id="chatbot-messages">
@@ -204,6 +212,6 @@
     </div>
   </div>
 
-  <!-- ==================== SCRIPTS ==================== -->
+  <!-- ==================== SCRIPTS ==================== -->
 </body>
 </html>

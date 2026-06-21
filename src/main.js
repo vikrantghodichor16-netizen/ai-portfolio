@@ -56,6 +56,13 @@ async function init() {
     document.getElementById('skills-grid').innerHTML = '<p style="color: var(--text-muted)">Unable to load skills data</p>';
     document.getElementById('projects-grid').innerHTML = '<p style="color: var(--text-muted)">Unable to load projects</p>';
 
+    // Set a minimal fallback context so the chatbot still responds
+    setPortfolioContext(
+      { name: CONFIG.DISPLAY_NAME, login: CONFIG.GITHUB_USERNAME, bio: 'Developer', location: null, public_repos: 0, followers: 0, created_at: null },
+      [],
+      []
+    );
+
     initScrollReveal();
     initNavScrollSpy();
   }
