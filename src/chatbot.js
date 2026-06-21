@@ -9,6 +9,7 @@ let conversationHistory = [];
 let portfolioContext = null; // null = not yet loaded; '' = load failed/no data
 let isStreaming = false;
 let lastRequestTime = 0;
+let cachedModels = null; // cache model list so we don't re-fetch every settings open
 
 export function setPortfolioContext(profile, repos, languages) {
   const repoSummaries = repos.slice(0, 15).map(r =>
@@ -117,29 +118,30 @@ export function initChatbot() {
       apiKeyInput.value = getApiKey();
       if (modelSelect) {
         modelSelect.value = getSelectedModel();
-        
-        // Fetch available models list dynamically
+
+        // Only fetch models once and cache — avoid burning API quota on every settings open
         const key = getApiKey();
-        if (key) {
+        if (key && !cachedModels) {
           try {
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
             if (res.ok) {
               const data = await res.json();
-              const models = (data.models || [])
+              cachedModels = (data.models || [])
                 .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
                 .map(m => m.name.replace('models/', ''));
-
-              if (models.length > 0) {
-                const currentVal = getSelectedModel();
-                modelSelect.innerHTML = models.map(m => {
-                  const label = m === CONFIG.GEMINI_MODEL ? `${m} (Default)` : m;
-                  return `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${label}</option>`;
-                }).join('');
-              }
             }
           } catch (e) {
-            console.warn("Unable to fetch dynamic models list, using defaults.", e);
+            console.warn('Unable to fetch dynamic models list, using defaults.', e);
           }
+        }
+
+        if (cachedModels && cachedModels.length > 0) {
+          const currentVal = getSelectedModel();
+          modelSelect.innerHTML = cachedModels.map(m => {
+            const label = m === CONFIG.GEMINI_MODEL ? `${m} (Default)` : m;
+            return `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${label}</option>`;
+          }).join('');
+          modelSelect.value = currentVal;
         }
       }
     }
@@ -240,7 +242,19 @@ export function initChatbot() {
       if (err.message === 'NO_API_KEY') {
         addMessage('assistant', '🔑 Please set your Gemini API key in settings (⚙️ icon).');
       } else if (err.message === 'RATE_LIMITED') {
-        addMessage('assistant', '⏳ Rate limited by the API. Please wait a moment and try again.');
+        // Show countdown so user knows exactly when to retry
+        const msgEl = addMessage('assistant', '⏳ Rate limited by Gemini API. Please wait <strong>60s</strong> before trying again. (Free tier: 15 requests/min)');
+        const contentEl = msgEl.querySelector('.chatbot__msg-content');
+        let secs = 60;
+        const countdown = setInterval(() => {
+          secs--;
+          if (secs <= 0) {
+            clearInterval(countdown);
+            contentEl.innerHTML = '✅ Ready! You can send a message now.';
+          } else {
+            contentEl.innerHTML = `⏳ Rate limited. Retrying in <strong>${secs}s</strong>…`;
+          }
+        }, 1000);
         // Remove last user message from history
         conversationHistory.pop();
       } else {
