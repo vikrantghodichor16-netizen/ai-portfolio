@@ -87,6 +87,40 @@ async function sendToGemini(userMessage) {
   return res;
 }
 
+// ---- Shared SSE streaming helper ----
+async function streamResponse(apiRes, contentEl, messagesEl) {
+  let fullText = '';
+  const reader = apiRes.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const jsonStr = line.slice(6).trim();
+        if (!jsonStr || jsonStr === '[DONE]') continue;
+        try {
+          const data = JSON.parse(jsonStr);
+          const chunk = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (chunk) {
+            fullText += chunk;
+            contentEl.innerHTML = formatMessage(fullText);
+            scrollToBottom(messagesEl);
+          }
+        } catch { /* skip malformed JSON */ }
+      }
+    }
+  }
+  return fullText;
+}
+
 export function initChatbot() {
   const fab = document.getElementById('chatbot-fab');
   const panel = document.getElementById('chatbot-panel');
@@ -152,6 +186,7 @@ export function initChatbot() {
     const key = apiKeyInput.value.trim();
     if (key) {
       setApiKey(key);
+      cachedModels = null; // reset model cache when key changes
     }
     if (modelSelect) {
       setSelectedModel(modelSelect.value);
@@ -160,12 +195,64 @@ export function initChatbot() {
     addMessage('assistant', '✅ Settings saved! You can now chat with me.');
   });
 
-  // Send message
+  // ---- Core: streams API response into a new assistant bubble ----
+  async function doStream(text) {
+    const res = await sendToGemini(text); // also pushes user msg to history
+    const assistantEl = addMessage('assistant', '');
+    const contentEl = assistantEl.querySelector('.chatbot__msg-content');
+    const fullText = await streamResponse(res, contentEl, messages);
+    if (fullText) {
+      conversationHistory.push({ role: 'model', parts: [{ text: fullText }] });
+    }
+  }
+
+  // ---- Auto-retry with live countdown ----
+  // isStreaming stays true during the entire wait so user cannot queue more messages.
+  function scheduleAutoRetry(text, retryAttempt = 1) {
+    const MAX_RETRIES = 2;
+    const waitSecs = retryAttempt === 1 ? 60 : 120;
+
+    const msgEl = addMessage('assistant', '');
+    const contentEl = msgEl.querySelector('.chatbot__msg-content');
+    let secs = waitSecs;
+    contentEl.innerHTML = `⏳ Gemini rate limit hit. Auto-retrying in <strong>${secs}s</strong>…`;
+
+    const countdown = setInterval(async () => {
+      secs--;
+      if (secs > 0) {
+        contentEl.innerHTML = `⏳ Auto-retrying in <strong>${secs}s</strong>…`;
+        return;
+      }
+
+      clearInterval(countdown);
+      contentEl.innerHTML = '🔄 Retrying your message…';
+
+      try {
+        await doStream(text);
+        msgEl.remove(); // success — remove the countdown bubble
+      } catch (retryErr) {
+        if (retryErr.message === 'RATE_LIMITED' && retryAttempt < MAX_RETRIES) {
+          conversationHistory.pop(); // remove the user msg sendToGemini just pushed
+          msgEl.remove();
+          scheduleAutoRetry(text, retryAttempt + 1); // try once more with longer wait
+          return;
+        }
+        conversationHistory.pop();
+        contentEl.innerHTML = retryErr.message === 'RATE_LIMITED'
+          ? '❌ Still rate limited after retries. Please wait a few minutes, then try again.'
+          : `❌ Retry failed: ${retryErr.message}`;
+      }
+
+      isStreaming = false; // unlock input after retry completes (success or final failure)
+    }, 1000);
+  }
+
+  // ---- Send message ----
   async function handleSend() {
     const text = input.value.trim();
     if (!text || isStreaming) return;
 
-    // Rate limiting
+    // Client-side rate limiting
     const now = Date.now();
     if (now - lastRequestTime < CONFIG.CHAT_RATE_LIMIT_MS) {
       addMessage('assistant', '⏳ Please wait a moment before sending another message.');
@@ -185,7 +272,7 @@ export function initChatbot() {
       return;
     }
 
-    // Only block if context is still actively loading (null), not if it just couldn't load
+    // Only block if context is still actively loading (null)
     if (portfolioContext === null) {
       addMessage('assistant', '⏳ I\'m still loading portfolio data. Please try again in a moment.');
       return;
@@ -195,75 +282,26 @@ export function initChatbot() {
     isStreaming = true;
 
     try {
-      const res = await sendToGemini(text);
+      await doStream(text);
       removeTypingIndicator(typingEl);
-
-      const assistantEl = addMessage('assistant', '');
-      const contentEl = assistantEl.querySelector('.chatbot__msg-content');
-      let fullText = '';
-
-      // Stream SSE response
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const jsonStr = line.slice(6).trim();
-            if (!jsonStr || jsonStr === '[DONE]') continue;
-            try {
-              const data = JSON.parse(jsonStr);
-              const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) {
-                fullText += text;
-                contentEl.innerHTML = formatMessage(fullText);
-                scrollToBottom(messages);
-              }
-            } catch { /* skip malformed JSON */ }
-          }
-        }
-      }
-
-      // Store in history
-      if (fullText) {
-        conversationHistory.push({ role: 'model', parts: [{ text: fullText }] });
-      }
+      isStreaming = false;
     } catch (err) {
       removeTypingIndicator(typingEl);
 
       if (err.message === 'NO_API_KEY') {
         addMessage('assistant', '🔑 Please set your Gemini API key in settings (⚙️ icon).');
+        isStreaming = false;
       } else if (err.message === 'RATE_LIMITED') {
-        // Show countdown so user knows exactly when to retry
-        const msgEl = addMessage('assistant', '⏳ Rate limited by Gemini API. Please wait <strong>60s</strong> before trying again. (Free tier: 15 requests/min)');
-        const contentEl = msgEl.querySelector('.chatbot__msg-content');
-        let secs = 60;
-        const countdown = setInterval(() => {
-          secs--;
-          if (secs <= 0) {
-            clearInterval(countdown);
-            contentEl.innerHTML = '✅ Ready! You can send a message now.';
-          } else {
-            contentEl.innerHTML = `⏳ Rate limited. Retrying in <strong>${secs}s</strong>…`;
-          }
-        }, 1000);
-        // Remove last user message from history
+        // Pop the user msg sendToGemini pushed, then auto-retry
+        // isStreaming intentionally stays true during countdown + retry
         conversationHistory.pop();
+        scheduleAutoRetry(text);
       } else {
-        addMessage('assistant', '❌ Something went wrong. Please try again.');
+        addMessage('assistant', `❌ Something went wrong. Please try again.<br><small style="opacity:0.6">${err.message}</small>`);
         console.error('Chatbot error:', err);
         conversationHistory.pop();
+        isStreaming = false;
       }
-    } finally {
-      isStreaming = false;
     }
   }
 
