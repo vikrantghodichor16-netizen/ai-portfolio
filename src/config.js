@@ -24,8 +24,8 @@ export const CONFIG = {
   GITHUB_API: 'https://api.github.com',
 
   // Gemini API (for dev mode — production uses serverless proxy)
-  GEMINI_MODEL: 'gemini-1.5-flash',
-  GEMINI_API_URL: 'https://generativelanguage.googleapis.com/v1/models',
+  GEMINI_MODEL: 'gemini-3.5-flash',
+  GEMINI_API_URL: 'https://generativelanguage.googleapis.com/v1beta/models',
 
   // Chat settings
   CHAT_MAX_TOKENS: 500,
